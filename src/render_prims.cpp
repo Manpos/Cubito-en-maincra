@@ -35,17 +35,26 @@ namespace ClothMesh {
 	extern void drawClothMesh();
 }
 
+namespace Cube {
+	extern void setupCube();
+	extern void cleanupCube();
+	extern void drawCube();
+}
+
 void setupPrims() {
 	Sphere::setupSphere();
 	Capsule::setupCapsule();
 	LilSpheres::setupParticles(LilSpheres::maxParticles);
 	ClothMesh::setupClothMesh();
+	Cube::setupCube();
+	
 }
 void cleanupPrims() {
 	Sphere::cleanupSphere();
 	Capsule::cleanupCapsule();
 	LilSpheres::cleanupParticles();
 	ClothMesh::cleanupClothMesh();
+	Cube::cleanupCube();
 }
 
 void renderPrims() {
@@ -60,4 +69,6 @@ void renderPrims() {
 	
 	if (renderCloth)
 		ClothMesh::drawClothMesh();
+
+	Cube::drawCube();
 }
