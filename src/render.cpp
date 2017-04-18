@@ -255,14 +255,14 @@ namespace Cube {
 	GLuint cubeProgram;
 
 	float cubeVerts[] = {
-		-5.f,  0.f, -5.f,
-		5.f,  0.f, -5.f,
-		5.f,  0.f,  5.f,
-		-5.f,  0.f,  5.f,
-		-5.f, 10.f, -5.f,
-		5.f, 10.f, -5.f,
-		5.f, 10.f,  5.f,
-		-5.f, 10.f,  5.f,
+		-2.5f,  0.f, -2.5f,
+		2.5f,  0.f, -2.5f,
+		2.5f,  0.f,  2.5f,
+		-2.5f,  0.f,  2.5f,
+		-2.5f, 5.f, -2.5f,
+		2.5f, 5.f, -2.5f,
+		2.5f, 5.f,  2.5f,
+		-2.5f, 5.f,  2.5f,
 	};
 
 	GLubyte cubeIdx[] = {
@@ -284,7 +284,7 @@ namespace Cube {
 	in vec3 in_Position;\n\
 	uniform mat4 mvpMat;\n\
 	void main() {\n\
-	gl_Position = mvpMat * vec4(in_Position, 1.0) + vec4(5.0, 5.f, 0.f, 0.f);\n\
+	gl_Position = mvpMat * vec4(in_Position, 1.0) + vec4(0.0, 5.f, 0.f, 0.f);\n\
 	}";
 	const char* fragShader_flatColor =
 	"#version 330\n\
@@ -333,7 +333,7 @@ namespace Cube {
 		glUseProgram(cubeProgram);
 		glUniformMatrix4fv(glGetUniformLocation(cubeProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(_MVP));
 		//FLOOR
-		glUniform4f(glGetUniformLocation(cubeProgram, "color"), 0.6f, 0.6f, 0.6f, 1.f);
+		glUniform4f(glGetUniformLocation(cubeProgram, "color"), 0.278f, 0.902f, 0.922f, 0.777f);
 		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
 		//WALLS
 		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 4));
