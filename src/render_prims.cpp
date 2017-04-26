@@ -40,7 +40,7 @@ namespace ClothMesh {
 namespace Cube {
 	extern void setupCube();
 	extern void cleanupCube();
-	extern void updateCube(glm::mat4* transform);
+	extern void updateCube(glm::mat4& transform);
 	extern void drawCube();
 }
 

@@ -134,7 +134,7 @@ void cleanupCube() {
 	glDeleteShader(cubeShaders[0]);
 	glDeleteShader(cubeShaders[1]);
 }
-void updateCube(const glm::mat4& transform) {
+void updateCube(glm::mat4& transform) {
 	objMat = transform;
 }
 void drawCube() {
