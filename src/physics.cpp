@@ -2,6 +2,7 @@
 #include <imgui\imgui_impl_glfw_gl3.h>
 #include <glm\glm.hpp>
 #include <glm\gtc\quaternion.hpp>
+#include <glm\gtc\matrix_transform.hpp>
 
 #define EOM EquationsOfMotion::Instance()
 
@@ -40,7 +41,15 @@ private:
 		return s_instance;
 	}
 
+	vec3 linearMom = vec3(0.f), angularMom = vec3(0.f), velocity = vec3(0.f), comPos = vec3(0.f), angularVel = vec3(0.f), torque = vec3(0.f);
+	mat4 inertia, orientation, position;
+
 public:
+
+	//Torque
+	vec3 Torque(vec3 comPosition, vec3 force, vec3 collisionPoint) {
+		return cross((collisionPoint - comPosition), force);
+	}
 
 	//Linear Momentum
 	vec3 LinearMomentum(vec3 linearM, vec3 force, float dt) {
@@ -57,9 +66,9 @@ public:
 		return linearM / mass;
 	}
 
-	//Position
-	vec3 Position(vec3 position, vec3 velocity, float dt) {
-		return position + dt * velocity;
+	//CoM Position
+	vec3 CoMPosition(vec3 comPosition, vec3 velocity, float dt) {
+		return comPosition + dt * velocity;
 	}
 
 	//Inertia
@@ -73,10 +82,30 @@ public:
 	}
 
 	//Rotation
-	quat Rotation(quat rotation, vec3 angularV, float dt){
-		return mat4_cast(rotation) + dt * (vec4(angularV, 1.f) * mat4_cast(rotation));
+	mat4 Orientation(mat4 orientation, vec3 angularV, float dt) {
+		return (orientation)+dt * mat4_cast(quat(vec4(angularV, 1.f)) * quat(orientation));
 	}
 
+	//Cube fragments position
+	mat4 Position(mat4 orientation, vec3 position, vec3 comPosition) {
+		mat4 positionM = translate(positionM, position);
+		mat4 comPositionM = translate(comPositionM, comPosition);
+		return orientation * positionM + comPositionM;
+	}
+
+	mat4 transformationMatrix(vec3 force, vec3 collisionPnt, float dt, float mass) {
+		torque = vec3(0.0);
+		torque = Torque(comPos, force, collisionPnt);
+		linearMom = LinearMomentum(linearMom, force, dt);
+		angularMom = AngularMomentum(angularMom, torque, dt);
+		velocity = Velocity(linearMom, mass);
+		comPos = CoMPosition(comPos, velocity, dt);
+		inertia = Inertia();
+	}
+
+	void SetCoM(vec3 comPosition) {
+		comPos = comPosition;
+	}
 };
 
 void PhysicsInit() {
