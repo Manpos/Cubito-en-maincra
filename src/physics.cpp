@@ -3,6 +3,8 @@
 #include <glm\glm.hpp>
 #include <glm\gtc\quaternion.hpp>
 #include <glm\gtc\matrix_transform.hpp>
+#include <iostream>
+
 
 #define EOM EquationsOfMotion::Instance()
 
@@ -35,16 +37,26 @@ void GUI() {
 
 class EquationsOfMotion {
 private:
-	static EquationsOfMotion s_instance;
+	
+	// Inertia variables
+	float mass = 1;
+	float height = 1;
+	float width = 1;
+	float depth = 1;
 
-	static EquationsOfMotion& Instance() {
-		return s_instance;
-	}
+	mat4 inertiaMat = scale(inertiaMat, vec3((1 / 12) * mass * (height * height + depth * depth), 
+		(1 / 12) * mass * (width * width + depth * depth),
+		(1 / 12) * mass * (width * width + depth * depth)));
+
 
 	vec3 linearMom = vec3(0.f), angularMom = vec3(0.f), velocity = vec3(0.f), comPos = vec3(0.f), angularVel = vec3(0.f), torque = vec3(0.f);
-	mat4 inertia, orientation, position;
-
+	mat4 inertia, orientation, position, model, translationMat1, translationMat2;
+	quat rotationVal;
 public:
+	static EquationsOfMotion& Instance() {
+		static EquationsOfMotion equisde;
+		return equisde;
+	}
 
 	//Torque
 	vec3 Torque(vec3 comPosition, vec3 force, vec3 collisionPoint) {
@@ -72,8 +84,8 @@ public:
 	}
 
 	//Inertia
-	mat4 Inertia(mat4 Ibody, quat rotation) {
-		return mat4_cast(rotation) * inverse(Ibody) * transpose(mat4_cast(rotation));
+	mat4 Inertia(quat rotation) {
+		return mat4_cast(rotation) * inverse(inertiaMat) * transpose(mat4_cast(rotation));
 	}
 
 	//Angular Velocity
@@ -93,14 +105,21 @@ public:
 		return orientation * positionM + comPositionM;
 	}
 
-	mat4 transformationMatrix(vec3 force, vec3 collisionPnt, float dt, float mass) {
+	mat4 TransformationMatrix(vec3 force, vec3 collisionPnt, float dt, float mass) {
 		torque = vec3(0.0);
 		torque = Torque(comPos, force, collisionPnt);
 		linearMom = LinearMomentum(linearMom, force, dt);
 		angularMom = AngularMomentum(angularMom, torque, dt);
 		velocity = Velocity(linearMom, mass);
 		comPos = CoMPosition(comPos, velocity, dt);
-		inertia = Inertia();
+		inertia = Inertia(rotationVal);
+		angularVel = AngularVelocity(inertia, angularMom, dt);
+		rotationVal = Orientation(mat4_cast(rotationVal), angularVel, dt);
+		
+		translationMat1 = translate(translationMat1, comPos);
+
+		mat4 finalMatrix = mat4(rotationVal) * translationMat1;
+		return finalMatrix;
 	}
 
 	void SetCoM(vec3 comPosition) {
@@ -109,11 +128,12 @@ public:
 };
 
 void PhysicsInit() {
-	//TODO
+	//TODO	
+
 }
 void PhysicsUpdate(float dt) {
-	Cube::updateCube(cubeTransform);
-	//TODO
+	Cube::updateCube(EOM.TransformationMatrix(vec3(0.1f, 0.1f, 0.1f), vec3(0.0f), dt, 1));
+	
 }
 void PhysicsCleanup() {
 	//TODO
