@@ -44,12 +44,9 @@ private:
 	float width = 1;
 	float depth = 1;
 
-	mat4 inertiaMat = scale(inertiaMat, vec3((1 / 12) * mass * (height * height + depth * depth), 
-		(1 / 12) * mass * (width * width + depth * depth),
-		(1 / 12) * mass * (width * width + depth * depth)));
+	bool firstTime = true;
 
-
-	vec3 linearMom = vec3(0.f), angularMom = vec3(0.f), velocity = vec3(0.f), comPos = vec3(0.f), angularVel = vec3(0.f), torque = vec3(0.f);
+	vec3 linearMom = vec3(0.f), angularMom = vec3(0.f), velocity = vec3(0.f), comPos = vec3(0.f), angularVel = vec3(0.f), torque = vec3(0.f), force;
 	mat4 inertia, orientation, position, model, translationMat1, translationMat2;
 	quat rotationVal;
 public:
@@ -85,7 +82,12 @@ public:
 
 	//Inertia
 	mat4 Inertia(quat rotation) {
-		return mat4_cast(rotation) * inverse(inertiaMat) * transpose(mat4_cast(rotation));
+		mat3 inertiaMat{ 
+			(1.0 / 12.0) * mass * (height * height + depth * depth), 0.0, 0.0,
+			0.0, (1.0 / 12.0) * mass * (width * width + depth * depth), 0.0,
+			0.0, 0.0, (1.0 / 12.0) * mass * (width * width + height * height) };
+
+		return mat4_cast(rotation) * mat4(inverse(transpose(inertiaMat))) * transpose(mat4_cast(rotation));
 	}
 
 	//Angular Velocity
@@ -105,7 +107,13 @@ public:
 		return orientation * positionM + comPositionM;
 	}
 
-	mat4 TransformationMatrix(vec3 force, vec3 collisionPnt, float dt, float mass) {
+	mat4 TransformationMatrix(vec3 initialForce, vec3 collisionPnt, float dt, float mass) {
+		if (firstTime) { 
+			force = initialForce; 
+			firstTime = false;
+		}
+
+		//force += vec3(0.0, -9.8 * dt, 0.0);
 		torque = vec3(0.0);
 		torque = Torque(comPos, force, collisionPnt);
 		linearMom = LinearMomentum(linearMom, force, dt);
@@ -117,6 +125,8 @@ public:
 		rotationVal = Orientation(mat4_cast(rotationVal), angularVel, dt);
 		
 		translationMat1 = translate(translationMat1, comPos);
+
+		force += vec3(0.0, -9.8 * dt, 0.0);
 
 		mat4 finalMatrix = mat4(rotationVal) * translationMat1;
 		return finalMatrix;
@@ -132,7 +142,7 @@ void PhysicsInit() {
 
 }
 void PhysicsUpdate(float dt) {
-	Cube::updateCube(EOM.TransformationMatrix(vec3(0.1f, 0.1f, 0.1f), vec3(0.0f), dt, 1));
+	Cube::updateCube(EOM.TransformationMatrix(vec3(0.0f, 10.0f, 0.0f), vec3(0.3, 0.0, 0.3f), dt, 1));
 	
 }
 void PhysicsCleanup() {
