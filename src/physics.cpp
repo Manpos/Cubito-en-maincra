@@ -22,11 +22,15 @@ bool firstTime = true;
 float mass = 1;
 
 vec3 gravity(0.0, -9.8, 0.0);
+vec3 appliedPoint(0.3, 0.0, 0.3);
+float timeCount = 0.0;
 
 vec3 position, velocity, angularMom, linealMom, torque, force, angularVel;
 quat orientation;
 mat3 I;
 mat3 Ibody;
+
+vec3 prevPos[8];
 
 #pragma endregion
 
@@ -36,6 +40,7 @@ namespace Cube {
 	extern void cleanupCube();
 	extern void updateCube(mat4& transform);
 	extern void drawCube();
+	extern glm::vec3 cubeVerts[];
 }
 
 void GUI() {
@@ -161,7 +166,7 @@ public:
 void PhysicsInit() {
 	//TODO	
 	velocity = torque = linealMom = angularMom = vec3(0.0);
-	force = vec3(0.0, 10.f, 0.0);
+	force = vec3(5.0, 10.f, 0.0);
 	position = vec3(0.0, 5.0, 0.0);
 	orientation = quat();
 
@@ -171,11 +176,10 @@ void PhysicsInit() {
 void PhysicsUpdate(float dt) {
 	//Cube::updateCube(EOM.TransformationMatrix(vec3(0.0f, 100.0, 0.0f), vec3(0.3, 0.0, 0.3), dt, 1));
 	if (firstTime) {
-		torque = 10.f * cross(vec3(0.3, 0.0, 0.3), force);
+		torque = 10.f * cross(appliedPoint, force);
 		linealMom = linealMom + force + gravity * dt;
 		angularMom = angularMom + torque * dt;
 		firstTime = false;
-			
 	}
 
 	else {
@@ -194,11 +198,46 @@ void PhysicsUpdate(float dt) {
 
 	mat4 rotation = transpose(mat3_cast(orientation));
 
-	mat4 positionMat; //= transpose(translate(positionMat, position));
+	mat4 positionMat(
+		1.0, 0.0, 0.0, position.x,
+		0.0, 1.0, 0.0, position.y,
+		0.0, 0.0, 1.0, position.z,
+		0.0, 0.0, 0.0, 1.0); //= transpose(translate(positionMat, position));
+	
+	mat4 updateMatrix = transpose(positionMat) * rotation;
 
-	mat4 updateMatrix = positionMat * rotation;
+
+	vec3 result = (mat3)rotation * Cube::cubeVerts[3] + position;
+	
+	for (int i = 0; i < 8; ++i) {
+		vec3 result = (mat3)rotation * Cube::cubeVerts[i] + position;
+		if (result.y < 0) {
+			force = vec3(0.0, 5.0, 0.0);
+			appliedPoint = result;
+			firstTime = true;
+		}
+		if (result.x > 5.0) {
+			force = vec3(-5.0, 0.0, 0.0);
+			appliedPoint = result;
+			firstTime = true;
+		}
+		if (result.y > 10) {
+			force = vec3(0.0, -5.0, 0.0);
+			appliedPoint = result;
+			firstTime = true;
+		}
+		if (result.x < -5.0) {
+			force = vec3(5.0, 0.0, 0.0);
+			appliedPoint = result;
+			firstTime = true;
+		}
+		prevPos[i] = result;
+	}
+
 
 	Cube::updateCube(updateMatrix);
+	timeCount += dt;
+	std::cout << timeCount << std::endl;
 
 }
 void PhysicsCleanup() {
