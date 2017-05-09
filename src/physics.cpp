@@ -14,6 +14,23 @@ bool show_test_window = false;
 
 mat4 cubeTransform;
 
+#pragma region variables
+
+bool firstTime = true;
+
+// Inertia variables
+float mass = 1;
+
+vec3 gravity(0.0, -9.8, 0.0);
+
+vec3 position, velocity, angularMom, linealMom, torque, force, angularVel;
+quat orientation;
+mat3 I;
+mat3 Ibody;
+
+#pragma endregion
+
+
 namespace Cube {
 	extern void setupCube();
 	extern void cleanupCube();
@@ -49,6 +66,7 @@ private:
 	vec3 linearMom = vec3(0.f), angularMom = vec3(0.f), velocity = vec3(0.f), comPos = vec3(0.f), angularVel = vec3(0.f), torque = vec3(0.f), force;
 	mat4 inertia, orientation, position, model, translationMat1, translationMat2;
 	quat rotationVal;
+
 public:
 	static EquationsOfMotion& Instance() {
 		static EquationsOfMotion equisde;
@@ -81,23 +99,23 @@ public:
 	}
 
 	//Inertia
-	mat4 Inertia(quat rotation) {
+	mat3 Inertia(quat rotation) {
 		mat3 inertiaMat{ 
 			(1.0 / 12.0) * mass * (height * height + depth * depth), 0.0, 0.0,
 			0.0, (1.0 / 12.0) * mass * (width * width + depth * depth), 0.0,
 			0.0, 0.0, (1.0 / 12.0) * mass * (width * width + height * height) };
 
-		return mat4_cast(rotation) * mat4(inverse(transpose(inertiaMat))) * transpose(mat4_cast(rotation));
+		return mat3_cast(rotation) * inverse(inertiaMat) * transpose(mat3_cast(rotation));
 	}
 
 	//Angular Velocity
-	vec3 AngularVelocity(mat4 inertia, vec3 angularM, float dt) {
-		return inertia * vec4(angularM, 1.f);
+	vec3 AngularVelocity(mat3 inertia, vec3 angularM, float dt) {
+		return inertia * angularM * dt;
 	}
 
 	//Rotation
-	mat4 Orientation(mat4 orientation, vec3 angularV, float dt) {
-		return (orientation)+dt * mat4_cast(quat(vec4(angularV, 1.f)) * quat(orientation));
+	quat Orientation(quat orientation, vec3 angularV) {
+		return normalize((orientation) + 0.5f * quat(0, angularV) * orientation);
 	}
 
 	//Cube fragments position
@@ -111,24 +129,27 @@ public:
 		if (firstTime) { 
 			force = initialForce; 
 			firstTime = false;
+			torque = vec3(0.0);
+			torque = Torque(comPos, force, collisionPnt);
+			angularMom = AngularMomentum(angularMom, torque, dt);
 		}
-
-		//force += vec3(0.0, -9.8 * dt, 0.0);
-		torque = vec3(0.0);
-		torque = Torque(comPos, force, collisionPnt);
+		else {
+			force = vec3(0.0, -9.8, 0.0);
+		}
+		//torque = Torque(comPos, force, collisionPnt);
 		linearMom = LinearMomentum(linearMom, force, dt);
-		angularMom = AngularMomentum(angularMom, torque, dt);
 		velocity = Velocity(linearMom, mass);
 		comPos = CoMPosition(comPos, velocity, dt);
 		inertia = Inertia(rotationVal);
 		angularVel = AngularVelocity(inertia, angularMom, dt);
-		rotationVal = Orientation(mat4_cast(rotationVal), angularVel, dt);
+		rotationVal = Orientation(mat4_cast(rotationVal), angularVel);
 		
 		translationMat1 = translate(translationMat1, comPos);
 
-		force += vec3(0.0, -9.8 * dt, 0.0);
+		std::cout << comPos.y << std::endl;
+		
 
-		mat4 finalMatrix = mat4(rotationVal) * translationMat1;
+		mat4 finalMatrix = transpose(mat4(mat3_cast(rotationVal))) * translationMat1;
 		return finalMatrix;
 	}
 
@@ -139,11 +160,46 @@ public:
 
 void PhysicsInit() {
 	//TODO	
+	velocity = torque = linealMom = angularMom = vec3(0.0);
+	force = vec3(0.0, 10.f, 0.0);
+	position = vec3(0.0, 5.0, 0.0);
+	orientation = quat();
 
+	Ibody = mat3((1.0 / 12.0) * mass * 2);
+	
 }
 void PhysicsUpdate(float dt) {
-	Cube::updateCube(EOM.TransformationMatrix(vec3(0.0f, 10.0f, 0.0f), vec3(0.3, 0.0, 0.3f), dt, 1));
+	//Cube::updateCube(EOM.TransformationMatrix(vec3(0.0f, 100.0, 0.0f), vec3(0.3, 0.0, 0.3), dt, 1));
+	if (firstTime) {
+		torque = 10.f * cross(vec3(0.3, 0.0, 0.3), force);
+		linealMom = linealMom + force + gravity * dt;
+		angularMom = angularMom + torque * dt;
+		firstTime = false;
+			
+	}
+
+	else {
+		linealMom = linealMom + gravity * dt;
+	}
+
+	velocity = linealMom / mass;
+	position = position + velocity * dt;
 	
+	mat3 orientMat = mat3_cast(orientation);
+	I = orientMat * inverse(Ibody) * transpose(orientMat);
+	angularVel = I * angularMom * dt;
+
+	quat quatW(0, angularVel);
+	orientation = normalize(orientation + quatW * orientation);
+
+	mat4 rotation = transpose(mat3_cast(orientation));
+
+	mat4 positionMat; //= transpose(translate(positionMat, position));
+
+	mat4 updateMatrix = positionMat * rotation;
+
+	Cube::updateCube(updateMatrix);
+
 }
 void PhysicsCleanup() {
 	//TODO
