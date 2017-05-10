@@ -17,6 +17,7 @@ mat4 cubeTransform;
 #pragma region variables
 
 bool firstTime = true;
+bool notFound = true;
 
 // Inertia variables
 float mass = 1;
@@ -24,6 +25,7 @@ float mass = 1;
 vec3 gravity(0.0, -9.8, 0.0);
 vec3 appliedPoint(0.3, 0.0, 0.3);
 float timeCount = 0.0;
+float bounceTolerance = 0.5;
 
 vec3 position, velocity, angularMom, linealMom, torque, force, angularVel;
 quat orientation;
@@ -202,7 +204,7 @@ void PhysicsUpdate(float dt) {
 		1.0, 0.0, 0.0, position.x,
 		0.0, 1.0, 0.0, position.y,
 		0.0, 0.0, 1.0, position.z,
-		0.0, 0.0, 0.0, 1.0); //= transpose(translate(positionMat, position));
+		0.0, 0.0, 0.0, 1.0);
 	
 	mat4 updateMatrix = transpose(positionMat) * rotation;
 
@@ -212,32 +214,35 @@ void PhysicsUpdate(float dt) {
 	for (int i = 0; i < 8; ++i) {
 		vec3 result = (mat3)rotation * Cube::cubeVerts[i] + position;
 		if (result.y < 0) {
-			force = vec3(0.0, 5.0, 0.0);
+			std::cout << force.y << std::endl;
+			force = vec3(0.0, -velocity.y, 0.0);
 			appliedPoint = result;
 			firstTime = true;
+			
 		}
 		if (result.x > 5.0) {
-			force = vec3(-5.0, 0.0, 0.0);
+			force = vec3(-velocity.x, 0.0, 0.0);
 			appliedPoint = result;
 			firstTime = true;
 		}
 		if (result.y > 10) {
-			force = vec3(0.0, -5.0, 0.0);
+			force = vec3(0.0, -velocity.y, 0.0);
 			appliedPoint = result;
 			firstTime = true;
 		}
 		if (result.x < -5.0) {
-			force = vec3(5.0, 0.0, 0.0);
+			force = vec3(-velocity.x, 0.0, 0.0);
 			appliedPoint = result;
 			firstTime = true;
 		}
 		prevPos[i] = result;
+		notFound = true;
 	}
 
 
 	Cube::updateCube(updateMatrix);
 	timeCount += dt;
-	std::cout << timeCount << std::endl;
+	//std::cout << timeCount << std::endl;
 
 }
 void PhysicsCleanup() {
