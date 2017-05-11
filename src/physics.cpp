@@ -17,7 +17,9 @@ mat4 cubeTransform;
 #pragma region variables
 
 bool firstTime = true;
+
 bool collision = false;
+
 
 // Inertia variables
 float mass = 1;
@@ -25,6 +27,7 @@ float mass = 1;
 vec3 gravity(0.0, -9.8, 0.0);
 vec3 appliedPoint(0.3, 0.0, 0.3);
 float timeCount = 0.0;
+float bounceTolerance = 0.5;
 
 vec3 position, velocity, angularMom, linealMom, torque, force, angularVel;
 quat orientation;
@@ -265,6 +268,7 @@ void PhysicsUpdate(float dt) {
 			torque = cross(cubeVertsPos[i], J);
 			linealMom = -linealMom + J;
 			angularMom = -angularMom + torque;
+			collision = true;
 		}
 		if (cubeVertsPos[i].x > 5.0) {
 			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
@@ -274,6 +278,7 @@ void PhysicsUpdate(float dt) {
 			torque = cross(cubeVertsPos[i], J);
 			linealMom = -linealMom + J;
 			angularMom = -angularMom + torque;
+			collision = true;
 		}
 		if (cubeVertsPos[i].y > 10) {
 			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
@@ -283,6 +288,7 @@ void PhysicsUpdate(float dt) {
 			torque = cross(cubeVertsPos[i], J);
 			linealMom = -linealMom + J;
 			angularMom = -angularMom + torque;
+			collision = true;
 		}
 		if (cubeVertsPos[i].x < -5.0) {
 			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
@@ -292,6 +298,7 @@ void PhysicsUpdate(float dt) {
 			torque = cross(cubeVertsPos[i], J);
 			linealMom = -linealMom + J;
 			angularMom = -angularMom + torque;
+			collision = true;
 		}
 
 		prevPos[i] = cubeVertsPos[i];
