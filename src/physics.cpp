@@ -17,6 +17,7 @@ mat4 cubeTransform;
 #pragma region variables
 
 bool firstTime = true;
+bool collision = false;
 
 // Inertia variables
 float mass = 1;
@@ -30,7 +31,14 @@ quat orientation;
 mat3 I;
 mat3 Ibody;
 
+vec3 Pa, J;
+float Vrel;
+float j = 0.0;
+float E = 0.3;
 vec3 prevPos[8];
+vec3 cubeVertsPos[8];
+
+void Restart();
 
 #pragma endregion
 
@@ -46,7 +54,7 @@ namespace Cube {
 void GUI() {
 	{	//FrameRate
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
+		
 		//TODO
 	}
 
@@ -164,25 +172,30 @@ public:
 };
 
 void PhysicsInit() {
-	//TODO	
+	//TODO
+	appliedPoint = vec3(0.3, 0.0, 0.3);
 	velocity = torque = linealMom = angularMom = vec3(0.0);
 	force = vec3(5.0, 10.f, 0.0);
 	position = vec3(0.0, 5.0, 0.0);
 	orientation = quat();
-
+	firstTime = true;
 	Ibody = mat3((1.0 / 12.0) * mass * 2);
 	
 }
 void PhysicsUpdate(float dt) {
 	//Cube::updateCube(EOM.TransformationMatrix(vec3(0.0f, 100.0, 0.0f), vec3(0.3, 0.0, 0.3), dt, 1));
+	if (ImGui::Button("Restart")) {
+		Restart();
+	}
+
 	if (firstTime) {
-		torque = 10.f * cross(appliedPoint, force);
+		torque = cross(appliedPoint, force);
 		linealMom = linealMom + force + gravity * dt;
 		angularMom = angularMom + torque * dt;
 		firstTime = false;
 	}
 
-	else {
+	else if(!collision) {
 		linealMom = linealMom + gravity * dt;
 	}
 
@@ -202,44 +215,104 @@ void PhysicsUpdate(float dt) {
 		1.0, 0.0, 0.0, position.x,
 		0.0, 1.0, 0.0, position.y,
 		0.0, 0.0, 1.0, position.z,
-		0.0, 0.0, 0.0, 1.0); //= transpose(translate(positionMat, position));
+		0.0, 0.0, 0.0, 1.0);
 	
 	mat4 updateMatrix = transpose(positionMat) * rotation;
-
-
-	vec3 result = (mat3)rotation * Cube::cubeVerts[3] + position;
 	
+	collision = false;
+
 	for (int i = 0; i < 8; ++i) {
-		vec3 result = (mat3)rotation * Cube::cubeVerts[i] + position;
-		if (result.y < 0) {
-			force = vec3(0.0, 5.0, 0.0);
-			appliedPoint = result;
-			firstTime = true;
+
+		cubeVertsPos[i] = (mat3)rotation * Cube::cubeVerts[i] + position;
+		/*if (cubeVertsPos[i].y < 0.0) {
+			force.y = -velocity.y;
+			appliedPoint = cubeVertsPos[i];
+			torque = cross(appliedPoint - position, force);
+			linealMom = torque;
+			angularMom = inverse(I) * torque;
+			collision = true;
 		}
-		if (result.x > 5.0) {
-			force = vec3(-5.0, 0.0, 0.0);
-			appliedPoint = result;
-			firstTime = true;
+		if (cubeVertsPos[i].x > 5.0) {
+			force.x = -velocity.x;
+			appliedPoint = cubeVertsPos[i];
+			torque = cross(appliedPoint - position, force);
+			linealMom = torque;
+			angularMom = inverse(I) * torque;
+			collision = true;
 		}
-		if (result.y > 10) {
-			force = vec3(0.0, -5.0, 0.0);
-			appliedPoint = result;
-			firstTime = true;
+		if (cubeVertsPos[i].y > 10) {
+			force.y = -velocity.y;
+			appliedPoint = cubeVertsPos[i];
+			torque = cross(appliedPoint - position, force);
+			linealMom = torque;
+			angularMom = inverse(I) * torque;
+			collision = true;
 		}
-		if (result.x < -5.0) {
-			force = vec3(5.0, 0.0, 0.0);
-			appliedPoint = result;
-			firstTime = true;
+		if (cubeVertsPos[i].x < -5.0) {
+			force.x = -velocity.x;
+			appliedPoint = cubeVertsPos[i];
+			torque = cross(appliedPoint - position, force);
+			linealMom = torque;
+			angularMom = inverse(I) * torque;
+			collision = true;
+		}*/
+
+		if (cubeVertsPos[i].y < 0.0) {
+			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+			Vrel = dot(vec3(0.0, 1.0, 0.0), Pa);
+			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, 1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, 1.0, 0.0)), cubeVertsPos[i]))));
+			J = j * vec3(0.0, 1.0, 0.0);
+			torque = cross(cubeVertsPos[i], J);
+			linealMom = -linealMom + J;
+			angularMom = -angularMom + torque;
 		}
-		prevPos[i] = result;
+		if (cubeVertsPos[i].x > 5.0) {
+			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+			Vrel = dot(vec3(-1.0, 0.0, 0.0), Pa);
+			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(-1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(-1.0, 0.0, 0.0)), cubeVertsPos[i]))));
+			J = j * vec3(-1.0, 0.0, 0.0);
+			torque = cross(cubeVertsPos[i], J);
+			linealMom = -linealMom + J;
+			angularMom = -angularMom + torque;
+		}
+		if (cubeVertsPos[i].y > 10) {
+			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+			Vrel = dot(vec3(0.0, -1.0, 0.0), Pa);
+			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, -1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, -1.0, 0.0)), cubeVertsPos[i]))));
+			J = j * vec3(0.0, -1.0, 0.0);
+			torque = cross(cubeVertsPos[i], J);
+			linealMom = -linealMom + J;
+			angularMom = -angularMom + torque;
+		}
+		if (cubeVertsPos[i].x < -5.0) {
+			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+			Vrel = dot(vec3(1.0, 0.0, 0.0), Pa);
+			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(1.0, 0.0, 0.0)), cubeVertsPos[i]))));
+			J = j * vec3(1.0, 0.0, 0.0);
+			torque = cross(cubeVertsPos[i], J);
+			linealMom = -linealMom + J;
+			angularMom = -angularMom + torque;
+		}
+
+		prevPos[i] = cubeVertsPos[i];
 	}
 
-
+	std::cout << velocity.x << std::endl;
 	Cube::updateCube(updateMatrix);
 	timeCount += dt;
-	std::cout << timeCount << std::endl;
+	//std::cout << timeCount << std::endl;
 
 }
 void PhysicsCleanup() {
 	//TODO
+}
+
+void Restart() {
+	appliedPoint = vec3(0.3, 0.0, 0.3);
+	velocity = torque = linealMom = angularMom = vec3(0.0);
+	force = vec3(5.0, 10.f, 0.0);
+	position = vec3(0.0, 5.0, 0.0);
+	orientation = quat();
+	firstTime = true;
+	Ibody = mat3((1.0 / 12.0) * mass * 2);
 }
