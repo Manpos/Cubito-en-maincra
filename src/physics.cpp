@@ -27,7 +27,7 @@ float mass = 1;
 vec3 gravity(0.0, -9.8, 0.0);
 vec3 appliedPoint(0.3, 0.0, 0.3);
 float timeCount = 0.0;
-float bounceTolerance = 0.5;
+float bounceTolerance = 1;
 
 vec3 position, velocity, angularMom, linealMom, torque, force, angularVel;
 quat orientation;
@@ -263,21 +263,26 @@ void PhysicsUpdate(float dt) {
 		if (cubeVertsPos[i].y < 0.0) {
 			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
 			Vrel = dot(vec3(0.0, 1.0, 0.0), Pa);
-			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, 1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, 1.0, 0.0)), cubeVertsPos[i]))));
+			j = -((E) * Vrel);
+			J = j * vec3(0.0, 1.0, 0.0);
+			torque = cross(cubeVertsPos[i], J);
+			linealMom = linealMom + J;
+			angularMom = angularMom + torque;
+			/*j = -((1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, 1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, 1.0, 0.0)), cubeVertsPos[i]))));
 			J = j * vec3(0.0, 1.0, 0.0);
 			torque = cross(cubeVertsPos[i], J);
 			linealMom = -linealMom + J;
-			angularMom = -angularMom + torque;
-			collision = true;
+			angularMom = -angularMom + torque;*/
 		}
-		if (cubeVertsPos[i].x > 5.0) {
+
+		/*if (cubeVertsPos[i].x > 5.0) {
 			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
 			Vrel = dot(vec3(-1.0, 0.0, 0.0), Pa);
 			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(-1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(-1.0, 0.0, 0.0)), cubeVertsPos[i]))));
 			J = j * vec3(-1.0, 0.0, 0.0);
 			torque = cross(cubeVertsPos[i], J);
-			linealMom = -linealMom + J;
-			angularMom = -angularMom + torque;
+			linealMom = linealMom + J;
+			angularMom = angularMom + torque;
 			collision = true;
 		}
 		if (cubeVertsPos[i].y > 10) {
@@ -286,8 +291,8 @@ void PhysicsUpdate(float dt) {
 			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, -1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, -1.0, 0.0)), cubeVertsPos[i]))));
 			J = j * vec3(0.0, -1.0, 0.0);
 			torque = cross(cubeVertsPos[i], J);
-			linealMom = -linealMom + J;
-			angularMom = -angularMom + torque;
+			linealMom = linealMom + J;
+			angularMom = angularMom + torque;
 			collision = true;
 		}
 		if (cubeVertsPos[i].x < -5.0) {
@@ -296,10 +301,10 @@ void PhysicsUpdate(float dt) {
 			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(1.0, 0.0, 0.0)), cubeVertsPos[i]))));
 			J = j * vec3(1.0, 0.0, 0.0);
 			torque = cross(cubeVertsPos[i], J);
-			linealMom = -linealMom + J;
-			angularMom = -angularMom + torque;
+			linealMom = linealMom + J;
+			angularMom = angularMom + torque;
 			collision = true;
-		}
+		}*/
 
 		prevPos[i] = cubeVertsPos[i];
 	}
