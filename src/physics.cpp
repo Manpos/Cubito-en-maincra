@@ -20,8 +20,6 @@ bool firstTime = true;
 
 bool collision = false;
 
-
-// Inertia variables
 float mass = 1;
 
 vec3 gravity(0.0, -9.8, 0.0);
@@ -68,126 +66,35 @@ void GUI() {
 	}
 }
 
-class EquationsOfMotion {
-private:
-	
-	// Inertia variables
-	float mass = 1;
-	float height = 1;
-	float width = 1;
-	float depth = 1;
-
-	bool firstTime = true;
-
-	vec3 linearMom = vec3(0.f), angularMom = vec3(0.f), velocity = vec3(0.f), comPos = vec3(0.f), angularVel = vec3(0.f), torque = vec3(0.f), force;
-	mat4 inertia, orientation, position, model, translationMat1, translationMat2;
-	quat rotationVal;
-
-public:
-	static EquationsOfMotion& Instance() {
-		static EquationsOfMotion equisde;
-		return equisde;
-	}
-
-	//Torque
-	vec3 Torque(vec3 comPosition, vec3 force, vec3 collisionPoint) {
-		return cross((collisionPoint - comPosition), force);
-	}
-
-	//Linear Momentum
-	vec3 LinearMomentum(vec3 linearM, vec3 force, float dt) {
-		return linearM + dt * force;
-	}
-
-	//Angular Momentum
-	vec3 AngularMomentum(vec3 angularM, vec3 torque, float dt) {
-		return angularM + dt * torque;
-	}
-
-	//Velocity
-	vec3 Velocity(vec3 linearM, float mass) {
-		return linearM / mass;
-	}
-
-	//CoM Position
-	vec3 CoMPosition(vec3 comPosition, vec3 velocity, float dt) {
-		return comPosition + dt * velocity;
-	}
-
-	//Inertia
-	mat3 Inertia(quat rotation) {
-		mat3 inertiaMat{ 
-			(1.0 / 12.0) * mass * (height * height + depth * depth), 0.0, 0.0,
-			0.0, (1.0 / 12.0) * mass * (width * width + depth * depth), 0.0,
-			0.0, 0.0, (1.0 / 12.0) * mass * (width * width + height * height) };
-
-		return mat3_cast(rotation) * inverse(inertiaMat) * transpose(mat3_cast(rotation));
-	}
-
-	//Angular Velocity
-	vec3 AngularVelocity(mat3 inertia, vec3 angularM, float dt) {
-		return inertia * angularM * dt;
-	}
-
-	//Rotation
-	quat Orientation(quat orientation, vec3 angularV) {
-		return normalize((orientation) + 0.5f * quat(0, angularV) * orientation);
-	}
-
-	//Cube fragments position
-	mat4 Position(mat4 orientation, vec3 position, vec3 comPosition) {
-		mat4 positionM = translate(positionM, position);
-		mat4 comPositionM = translate(comPositionM, comPosition);
-		return orientation * positionM + comPositionM;
-	}
-
-	mat4 TransformationMatrix(vec3 initialForce, vec3 collisionPnt, float dt, float mass) {
-		if (firstTime) { 
-			force = initialForce; 
-			firstTime = false;
-			torque = vec3(0.0);
-			torque = Torque(comPos, force, collisionPnt);
-			angularMom = AngularMomentum(angularMom, torque, dt);
-		}
-		else {
-			force = vec3(0.0, -9.8, 0.0);
-		}
-		//torque = Torque(comPos, force, collisionPnt);
-		linearMom = LinearMomentum(linearMom, force, dt);
-		velocity = Velocity(linearMom, mass);
-		comPos = CoMPosition(comPos, velocity, dt);
-		inertia = Inertia(rotationVal);
-		angularVel = AngularVelocity(inertia, angularMom, dt);
-		rotationVal = Orientation(mat4_cast(rotationVal), angularVel);
-		
-		translationMat1 = translate(translationMat1, comPos);
-
-		std::cout << comPos.y << std::endl;
-		
-
-		mat4 finalMatrix = transpose(mat4(mat3_cast(rotationVal))) * translationMat1;
-		return finalMatrix;
-	}
-
-	void SetCoM(vec3 comPosition) {
-		comPos = comPosition;
-	}
-};
-
 void PhysicsInit() {
-	//TODO
-	appliedPoint = vec3(0.3, 0.0, 0.3);
+	
+	float HI = 5, LO = -5;
+	float r1 = LO + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HI - LO)));
+	float r2 = 5 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (7 - 5)));
+	float r3 = LO + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HI - LO)));
+
+
+	float ascendent = 5 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (10 - 5)));
+
+	float HAP = 1, LAP = -1;
+	float appPointX = LAP + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HAP - LAP)));
+	float appPointZ = LAP + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HAP - LAP)));
+
+	position = { r1, r2, r3 };
+
+	force = vec3(0.0, ascendent, 0.0);
 	velocity = torque = linealMom = angularMom = vec3(0.0);
-	force = vec3(5.0, 10.f, 0.0);
-	position = vec3(0.0, 5.0, 0.0);
+	appliedPoint = vec3(position.x + appPointX, 0.0, position.z + appPointZ);
 	orientation = quat();
 	firstTime = true;
 	Ibody = mat3((1.0 / 12.0) * mass * 2);
-	
+
+	timeCount = 0;
 }
+
 void PhysicsUpdate(float dt) {
-	//Cube::updateCube(EOM.TransformationMatrix(vec3(0.0f, 100.0, 0.0f), vec3(0.3, 0.0, 0.3), dt, 1));
-	if (ImGui::Button("Restart")) {
+
+	if (ImGui::Button("Restart") || timeCount >= 5) {
 		Restart();
 	}
 
@@ -222,109 +129,125 @@ void PhysicsUpdate(float dt) {
 	
 	mat4 updateMatrix = transpose(positionMat) * rotation;
 	
-	collision = false;
-
 	for (int i = 0; i < 8; ++i) {
 
 		cubeVertsPos[i] = (mat3)rotation * Cube::cubeVerts[i] + position;
+
+// Here the code of the collisions we tried to implement
+#pragma region Collisions
+
 		/*if (cubeVertsPos[i].y < 0.0) {
-			force.y = -velocity.y;
-			appliedPoint = cubeVertsPos[i];
-			torque = cross(appliedPoint - position, force);
-			linealMom = torque;
-			angularMom = inverse(I) * torque;
-			collision = true;
+		force.y = -velocity.y;
+		appliedPoint = cubeVertsPos[i];
+		torque = cross(appliedPoint - position, force);
+		linealMom = torque;
+		angularMom = inverse(I) * torque;
+		collision = true;
 		}
 		if (cubeVertsPos[i].x > 5.0) {
-			force.x = -velocity.x;
-			appliedPoint = cubeVertsPos[i];
-			torque = cross(appliedPoint - position, force);
-			linealMom = torque;
-			angularMom = inverse(I) * torque;
-			collision = true;
+		force.x = -velocity.x;
+		appliedPoint = cubeVertsPos[i];
+		torque = cross(appliedPoint - position, force);
+		linealMom = torque;
+		angularMom = inverse(I) * torque;
+		collision = true;
 		}
 		if (cubeVertsPos[i].y > 10) {
-			force.y = -velocity.y;
-			appliedPoint = cubeVertsPos[i];
-			torque = cross(appliedPoint - position, force);
-			linealMom = torque;
-			angularMom = inverse(I) * torque;
-			collision = true;
+		force.y = -velocity.y;
+		appliedPoint = cubeVertsPos[i];
+		torque = cross(appliedPoint - position, force);
+		linealMom = torque;
+		angularMom = inverse(I) * torque;
+		collision = true;
 		}
 		if (cubeVertsPos[i].x < -5.0) {
-			force.x = -velocity.x;
-			appliedPoint = cubeVertsPos[i];
-			torque = cross(appliedPoint - position, force);
-			linealMom = torque;
-			angularMom = inverse(I) * torque;
-			collision = true;
+		force.x = -velocity.x;
+		appliedPoint = cubeVertsPos[i];
+		torque = cross(appliedPoint - position, force);
+		linealMom = torque;
+		angularMom = inverse(I) * torque;
+		collision = true;
 		}*/
 
-		if (cubeVertsPos[i].y < 0.0) {
-			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
-			Vrel = dot(vec3(0.0, 1.0, 0.0), Pa);
-			j = -((E) * Vrel);
-			J = j * vec3(0.0, 1.0, 0.0);
-			torque = cross(cubeVertsPos[i], J);
-			linealMom = linealMom + J;
-			angularMom = angularMom + torque;
-			/*j = -((1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, 1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, 1.0, 0.0)), cubeVertsPos[i]))));
-			J = j * vec3(0.0, 1.0, 0.0);
-			torque = cross(cubeVertsPos[i], J);
-			linealMom = -linealMom + J;
-			angularMom = -angularMom + torque;*/
-		}
-
-		/*if (cubeVertsPos[i].x > 5.0) {
-			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
-			Vrel = dot(vec3(-1.0, 0.0, 0.0), Pa);
-			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(-1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(-1.0, 0.0, 0.0)), cubeVertsPos[i]))));
-			J = j * vec3(-1.0, 0.0, 0.0);
-			torque = cross(cubeVertsPos[i], J);
-			linealMom = linealMom + J;
-			angularMom = angularMom + torque;
-			collision = true;
-		}
-		if (cubeVertsPos[i].y > 10) {
-			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
-			Vrel = dot(vec3(0.0, -1.0, 0.0), Pa);
-			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, -1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, -1.0, 0.0)), cubeVertsPos[i]))));
-			J = j * vec3(0.0, -1.0, 0.0);
-			torque = cross(cubeVertsPos[i], J);
-			linealMom = linealMom + J;
-			angularMom = angularMom + torque;
-			collision = true;
-		}
-		if (cubeVertsPos[i].x < -5.0) {
-			Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
-			Vrel = dot(vec3(1.0, 0.0, 0.0), Pa);
-			j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(1.0, 0.0, 0.0)), cubeVertsPos[i]))));
-			J = j * vec3(1.0, 0.0, 0.0);
-			torque = cross(cubeVertsPos[i], J);
-			linealMom = linealMom + J;
-			angularMom = angularMom + torque;
-			collision = true;
-		}*/
-
-		prevPos[i] = cubeVertsPos[i];
+		/*if (cubeVertsPos[i].y < 0.0) {
+		Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+		Vrel = dot(vec3(0.0, 1.0, 0.0), Pa);
+		j = -((E) * Vrel);
+		J = j * vec3(0.0, 1.0, 0.0);
+		torque = cross(cubeVertsPos[i], J);
+		linealMom = linealMom + J;
+		angularMom = angularMom + torque;*/
+		/*j = -((1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, 1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, 1.0, 0.0)), cubeVertsPos[i]))));
+		J = j * vec3(0.0, 1.0, 0.0);
+		torque = cross(cubeVertsPos[i], J);
+		linealMom = -linealMom + J;
+		angularMom = -angularMom + torque;*/
 	}
 
-	std::cout << velocity.x << std::endl;
+	/*if (cubeVertsPos[i].x > 5.0) {
+	Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+	Vrel = dot(vec3(-1.0, 0.0, 0.0), Pa);
+	j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(-1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(-1.0, 0.0, 0.0)), cubeVertsPos[i]))));
+	J = j * vec3(-1.0, 0.0, 0.0);
+	torque = cross(cubeVertsPos[i], J);
+	linealMom = linealMom + J;
+	angularMom = angularMom + torque;
+	collision = true;
+	}
+	if (cubeVertsPos[i].y > 10) {
+	Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+	Vrel = dot(vec3(0.0, -1.0, 0.0), Pa);
+	j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(0.0, -1.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(0.0, -1.0, 0.0)), cubeVertsPos[i]))));
+	J = j * vec3(0.0, -1.0, 0.0);
+	torque = cross(cubeVertsPos[i], J);
+	linealMom = linealMom + J;
+	angularMom = angularMom + torque;
+	collision = true;
+	}
+	if (cubeVertsPos[i].x < -5.0) {
+	Pa = velocity + cross(angularVel, (cubeVertsPos[i] - position));
+	Vrel = dot(vec3(1.0, 0.0, 0.0), Pa);
+	j = (-(1 + E)*Vrel) / (1 / mass + dot(vec3(1.0, 0.0, 0.0), (inverse(I) * cross(cross(cubeVertsPos[i], vec3(1.0, 0.0, 0.0)), cubeVertsPos[i]))));
+	J = j * vec3(1.0, 0.0, 0.0);
+	torque = cross(cubeVertsPos[i], J);
+	linealMom = linealMom + J;
+	angularMom = angularMom + torque;
+	collision = true;
+	}*/
+
+	//	prevPos[i] = cubeVertsPos[i];
+	//}
+#pragma endregion
+	
 	Cube::updateCube(updateMatrix);
 	timeCount += dt;
-	//std::cout << timeCount << std::endl;
-
 }
 void PhysicsCleanup() {
 	//TODO
 }
 
 void Restart() {
-	appliedPoint = vec3(0.3, 0.0, 0.3);
+
+	float HI = 5, LO = -5;
+	float r1 = LO + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HI - LO)));
+	float r2 = 5 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (7 - 5)));
+	float r3 = LO + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HI - LO)));
+
+
+	float ascendent = 5 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (10 - 5)));
+	
+	float HAP = 1, LAP = -1;
+	float appPointX = LAP + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HAP - LAP)));
+	float appPointZ = LAP + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HAP - LAP)));
+
+	position = { r1, r2, r3 };
+
+	force = vec3(0.0, ascendent, 0.0);
 	velocity = torque = linealMom = angularMom = vec3(0.0);
-	force = vec3(5.0, 10.f, 0.0);
-	position = vec3(0.0, 5.0, 0.0);
+	appliedPoint = vec3(position.x + appPointX, 0.0, position.z + appPointZ);
 	orientation = quat();
 	firstTime = true;
 	Ibody = mat3((1.0 / 12.0) * mass * 2);
+
+	timeCount = 0;
 }
